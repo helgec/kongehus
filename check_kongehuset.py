@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 
 URL = "https://www.kongehuset.no/for-pressen"
 STATE_FILE = "seen_press_releases.json"
-SLACK_WEBHOOK_URL = os.environ.get("https://hooks.slack.com/services/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")
+SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
 
 def get_latest_pressemeldinger():
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
