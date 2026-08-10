@@ -3,7 +3,7 @@ name: Kongehuset Pressedetektor
 on:
   schedule:
     # Kjører hver halvtime (Cron-format)
-    - cron: '*/30 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch: # Gjør at du også kan starte skriptet manuelt fra GitHub UI
 
 jobs:
