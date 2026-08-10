@@ -15,41 +15,32 @@ def get_latest_pressemeldinger():
     soup = BeautifulSoup(response.text, "html.parser")
     results = []
     
-    # 1. Finn overskriften som heter/inneholder "Pressemeldinger"
-    target_heading = None
-    for heading in soup.find_all(["h1", "h2", "h3", "h4"]):
-        if "pressemeldinger" in heading.get_text().lower():
-            target_heading = heading
-            break
-            
-    if not target_heading:
-        print("Fant ikke overskriften 'Pressemeldinger'.")
-        return results
-
-    # 2. Hent seksjonen/containeren som overskriften ligger i
-    search_area = target_heading.find_parent(["section", "article", "div"])
-    if not search_area:
-        search_area = target_heading.parent
-
-    # 3. Hent KUN lenkene som ligger inne i denne spesifikke seksjonen
-    for a in search_area.find_all("a", href=True):
-        href = a["href"]
-        title = a.get_text(strip=True)
+    # Finn alle lenker hvor teksten inneholder "Gå til pressemelding"
+    for a in soup.find_all("a", href=True):
+        link_text = a.get_text(strip=True).lower()
         
-        # Filtrer vekk selve overskriften og generiske knapper
-        if not title or title.lower() in ["pressemeldinger", "se alle pressemeldinger", "les mer", "se alle"]:
-            continue
+        if "gå til pressemelding" in link_text:
+            href = a["href"]
+            full_url = href if href.startswith("http") else f"https://www.kongehuset.no{href}"
             
-        # Filtrer ut altfor korte tekster (f.eks. piler eller ikoner)
-        if len(title) < 5:
-            continue
-
-        full_url = href if href.startswith("http") else f"https://www.kongehuset.no{href}"
-        
-        # Sjekk at vi ikke legger til duplikater i listen
-        if not any(item["url"] == full_url for item in results):
-            results.append({"title": title, "url": full_url})
+            # Finn boksen/kortet som denne lenken ligger i
+            card = a.find_parent(["article", "div", "li"])
+            title = None
             
+            if card:
+                # Hent overskriften som ligger i samme boks
+                heading = card.find(["h2", "h3", "h4", "h5", "strong"])
+                if heading:
+                    title = heading.get_text(strip=True)
+            
+            # Fallback dersom overskriften ikke ble funnet i kortet
+            if not title:
+                title = "Pressemelding fra Kongehuset"
+            
+            # Unngå duplikater
+            if not any(item["url"] == full_url for item in results):
+                results.append({"title": title, "url": full_url})
+                
     return results
 
 def send_to_slack(title, url):
