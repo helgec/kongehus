@@ -1,0 +1,35 @@
+name: Kongehuset Pressedetektor
+
+on:
+  schedule:
+    # Kjører hver halvtime (Cron-format)
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Gjør at du også kan starte skriptet manuelt fra GitHub UI
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sjekk ut kildekode
+        uses: actions/checkout@v4
+
+      - name: Sett opp Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Installer avhengigheter
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Kjør overvåking
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: python check_kongehuset.py
+
+      - name: Lagre endringer i tilstandsfilen
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add seen_press_releases.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Oppdater lagrede pressemeldinger" && git push)
