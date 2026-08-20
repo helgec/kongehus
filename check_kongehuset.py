@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 import requests
 from bs4 import BeautifulSoup
 
@@ -10,7 +11,7 @@ SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
 
 def get_latest_pressemeldinger():
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    response = requests.get(URL, headers=headers)
+    response = requests.get(URL, headers=headers, timeout=10)
     response.raise_for_status()
     
     soup = BeautifulSoup(response.text, "html.parser")
@@ -18,13 +19,11 @@ def get_latest_pressemeldinger():
     
     date_pattern = re.compile(r'\b\d{1,2}\.\s+[a-zæøåA-ZÆØÅ]+\s+\d{4}\b')
     
-    # Finn alle lenker med teksten "Gå til pressemelding"
     for a in soup.find_all("a", href=True):
         if "gå til pressemelding" in a.get_text(strip=True).lower():
             href = a["href"]
             full_url = href if href.startswith("http") else f"https://www.kongehuset.no{href}"
             
-            # Gå oppover i HTML-treet til vi finner hele raden/kortet
             card = a.parent
             while card and card.name not in ["body", "html"]:
                 if card.find(["h1", "h2", "h3", "h4", "h5"]):
@@ -34,11 +33,9 @@ def get_latest_pressemeldinger():
             if not card:
                 card = a.parent
 
-            # 1. Hent tittel
             heading_el = card.find(["h1", "h2", "h3", "h4", "h5"])
             title = heading_el.get_text(strip=True) if heading_el else "Pressemelding"
 
-            # 2. Hent dato og ingress fra tekstene i kortet
             date_str = ""
             ingress_parts = []
             
@@ -68,7 +65,6 @@ def get_latest_pressemeldinger():
                     "ingress": ingress
                 })
                 
-    # 🎯 Siste endring: Returner KUN de 3 øverste (nyeste) pressemeldingene
     return results[:3]
 
 def send_to_slack(item):
@@ -91,13 +87,12 @@ def send_to_slack(item):
         "text": "\n".join(message_lines)
     }
     
-    response = requests.post(SLACK_WEBHOOK_URL, json=payload)
+    response = requests.post(SLACK_WEBHOOK_URL, json=payload, timeout=10)
     response.raise_for_status()
 
 def main():
     seen_urls = []
     
-    # Robust innlasting (tåler tomme filer uten å krasje)
     if os.path.exists(STATE_FILE):
         try:
             with open(STATE_FILE, "r", encoding="utf-8") as f:
@@ -113,18 +108,24 @@ def main():
         if item["url"] not in seen_urls:
             print(f"Ny pressemelding funnet: {item['title']}")
             if SLACK_WEBHOOK_URL:
-                send_to_slack(item)
-            new_seen.append(item["url"])
+                try:
+                    send_to_slack(item)
+                    new_seen.append(item["url"])
+                except Exception as e:
+                    print(f"❌ Kunne ikke sende til Slack: {e}")
+            else:
+                new_seen.append(item["url"])
             
-    # Lagre oppdatert tilstand
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(new_seen, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
-    main()
-import time
-
-if __name__ == "__main__":
     while True:
-        main()
-        time.sleep(45)  # Venter 15 minutter (900 sekunder) før neste sjekk
+        print("Sjekker Kongehuset for nye pressemeldinger...")
+        try:
+            main()
+        except Exception as e:
+            print(f"Feil under kjøring: {e}")
+        
+        print("Venter 15 minutter før neste sjekk...")
+        time.sleep(900)  # 900 sekunder = 15 minutter
