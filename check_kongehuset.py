@@ -122,3 +122,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+import time
+
+if __name__ == "__main__":
+    while True:
+        main()
+        time.sleep(45)  # Venter 15 minutter (900 sekunder) før neste sjekk
