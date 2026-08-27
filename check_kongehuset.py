@@ -11,8 +11,10 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 RSS_URL = "https://www.kongehuset.no/for-pressen/rss"
 STATE_FILE = "seen_press_releases.json"
 
+# Støtter opptil tre webhooks
 SLACK_WEBHOOK_URL_1 = os.environ.get("SLACK_WEBHOOK_URL_1") or os.environ.get("SLACK_WEBHOOK_URL")
 SLACK_WEBHOOK_URL_2 = os.environ.get("SLACK_WEBHOOK_URL_2")
+SLACK_WEBHOOK_URL_3 = os.environ.get("SLACK_WEBHOOK_URL_3")
 
 def get_latest_pressemeldinger():
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
@@ -49,7 +51,9 @@ def send_to_slack(item):
         message_lines.append(f">{ingress}")
 
     payload = {"text": "\n".join(message_lines)}
-    webhooks = [w for w in [SLACK_WEBHOOK_URL_1, SLACK_WEBHOOK_URL_2] if w]
+    
+    # Henter alle definerte webhooks
+    webhooks = [w for w in [SLACK_WEBHOOK_URL_1, SLACK_WEBHOOK_URL_2, SLACK_WEBHOOK_URL_3] if w]
 
     if not webhooks:
         print("⚠️ Ingen Slack-webhooks er konfigurert!")
@@ -95,4 +99,4 @@ if __name__ == "__main__":
             print(f"Feil under kjøring: {e}")
         
         print("Venter 15 minutter før neste sjekk...")
-        time.sleep(20)
+        time.sleep(900)
