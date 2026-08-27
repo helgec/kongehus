@@ -9,6 +9,10 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 RSS_URL = "https://www.kongehuset.no/for-pressen/rss"
+STATE_FILE = "seen_press_releases.json"
+
+SLACK_WEBHOOK_URL_1 = os.environ.get("SLACK_WEBHOOK_URL_1") or os.environ.get("SLACK_WEBHOOK_URL")
+SLACK_WEBHOOK_URL_2 = os.environ.get("SLACK_WEBHOOK_URL_2")
 
 def get_latest_pressemeldinger():
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
