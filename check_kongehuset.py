@@ -87,4 +87,4 @@ if __name__ == "__main__":
             print(f"Feil under kjøring: {e}")
         
         print("Venter 15 minutter før neste sjekk...")
-        time.sleep(900)
+        time.sleep(20)
