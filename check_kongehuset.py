@@ -1,73 +1,27 @@
-import json
-import os
-import re
-import time
+import feedparser
 import requests
-from bs4 import BeautifulSoup
+import urllib3
 
-URL = "https://www.kongehuset.no/for-pressen"
-STATE_FILE = "seen_press_releases.json"
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Støtter både én og to webhooks (fallback til standard SLACK_WEBHOOK_URL)
-SLACK_WEBHOOK_URL_1 = os.environ.get("SLACK_WEBHOOK_URL_1") or os.environ.get("SLACK_WEBHOOK_URL")
-SLACK_WEBHOOK_URL_2 = os.environ.get("SLACK_WEBHOOK_URL_2")
+RSS_URL = "https://www.kongehuset.no/for-pressen/rss"
 
 def get_latest_pressemeldinger():
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    response = requests.get(URL, headers=headers, timeout=30)
+    response = requests.get(RSS_URL, headers=headers, timeout=30, verify=False)
     response.raise_for_status()
     
-    soup = BeautifulSoup(response.text, "html.parser")
+    feed = feedparser.parse(response.content)
     results = []
     
-    date_pattern = re.compile(r'\b\d{1,2}\.\s+[a-zæøåA-ZÆØÅ]+\s+\d{4}\b')
-    
-    for a in soup.find_all("a", href=True):
-        if "gå til pressemelding" in a.get_text(strip=True).lower():
-            href = a["href"]
-            full_url = href if href.startswith("http") else f"https://www.kongehuset.no{href}"
-            
-            card = a.parent
-            while card and card.name not in ["body", "html"]:
-                if card.find(["h1", "h2", "h3", "h4", "h5"]):
-                    break
-                card = card.parent
-                
-            if not card:
-                card = a.parent
-
-            heading_el = card.find(["h1", "h2", "h3", "h4", "h5"])
-            title = heading_el.get_text(strip=True) if heading_el else "Pressemelding"
-
-            date_str = ""
-            ingress_parts = []
-            
-            for elem in card.find_all(["p", "div", "span", "time"]):
-                text = elem.get_text(strip=True)
-                
-                if not text or text == title or "gå til pressemelding" in text.lower():
-                    continue
-                    
-                date_match = date_pattern.search(text)
-                if date_match:
-                    date_str = date_match.group(0)
-                    clean_text = date_pattern.sub('', text).strip()
-                    if clean_text and clean_text not in ingress_parts:
-                        ingress_parts.append(clean_text)
-                else:
-                    if text not in ingress_parts and not any(text in p for p in ingress_parts):
-                        ingress_parts.append(text)
-
-            ingress = " ".join(ingress_parts).strip()
-
-            if not any(item["url"] == full_url for item in results):
-                results.append({
-                    "title": title,
-                    "url": full_url,
-                    "date": date_str,
-                    "ingress": ingress
-                })
-                
+    for entry in feed.entries:
+        results.append({
+            "title": entry.get("title", "Pressemelding"),
+            "url": entry.get("link", ""),
+            "date": entry.get("published", ""),
+            "ingress": entry.get("summary", "")
+        })
+        
     return results[:3]
 
 def send_to_slack(item):
