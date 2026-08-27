@@ -98,5 +98,5 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Feil under kjøring: {e}")
         
-        print("Venter 15 minutter før neste sjekk...")
-        time.sleep(900)
+        print("Venter 10 sekunder før neste sjekk...")
+        time.sleep(10)
