@@ -15,6 +15,7 @@ STATE_FILE = "seen_press_releases.json"
 SLACK_WEBHOOK_URL_1 = os.environ.get("SLACK_WEBHOOK_URL_1") or os.environ.get("SLACK_WEBHOOK_URL")
 SLACK_WEBHOOK_URL_2 = os.environ.get("SLACK_WEBHOOK_URL_2")
 SLACK_WEBHOOK_URL_3 = os.environ.get("SLACK_WEBHOOK_URL_3")
+SLACK_WEBHOOK_URL_4 = os.environ.get("SLACK_WEBHOOK_URL_4")
 
 def get_latest_pressemeldinger():
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
@@ -53,7 +54,7 @@ def send_to_slack(item):
     payload = {"text": "\n".join(message_lines)}
     
     # Henter alle definerte webhooks
-    webhooks = [w for w in [SLACK_WEBHOOK_URL_1, SLACK_WEBHOOK_URL_2, SLACK_WEBHOOK_URL_3] if w]
+    webhooks = [w for w in [SLACK_WEBHOOK_URL_1, SLACK_WEBHOOK_URL_2, SLACK_WEBHOOK_URL_3, SLACK_WEBHOOK_URL_4] if w]
 
     if not webhooks:
         print("⚠️ Ingen Slack-webhooks er konfigurert!")
