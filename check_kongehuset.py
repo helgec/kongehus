@@ -5,6 +5,11 @@ import time
 import requests
 import feedparser
 import urllib3
+import sys
+
+# Importer status-hjelperen
+sys.path.append("/home/nrknyheter")
+from status_helper import update_status
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -91,6 +96,9 @@ def main():
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(new_seen, f, ensure_ascii=False, indent=2)
 
+    # Vellykket sjekk
+    update_status("kongehuset", "Kongehuset-overvåker", status="OK")
+
 if __name__ == "__main__":
     while True:
         print("Sjekker Kongehuset for nye pressemeldinger...")
@@ -98,6 +106,8 @@ if __name__ == "__main__":
             main()
         except Exception as e:
             print(f"Feil under kjøring: {e}")
+            # Registrerer feilen på dashbordet
+            update_status("kongehuset", "Kongehuset-overvåker", status="ERROR", error_msg=str(e))
         
         print("Venter 20 sekunder før neste sjekk...")
         time.sleep(20)
