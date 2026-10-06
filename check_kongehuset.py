@@ -109,5 +109,5 @@ if __name__ == "__main__":
             # Registrerer feilen på dashbordet
             update_status("kongehuset", "Kongehuset-overvåker", status="ERROR", error_msg=str(e))
         
-        print("Venter 20 sekunder før neste sjekk...")
-        time.sleep(20)
+        print("Venter 60 sekunder før neste sjekk...")
+        time.sleep(60)
