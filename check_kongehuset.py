@@ -23,10 +23,21 @@ SLACK_WEBHOOK_URL_3 = os.environ.get("SLACK_WEBHOOK_URL_3")
 SLACK_WEBHOOK_URL_4 = os.environ.get("SLACK_WEBHOOK_URL_4")
 
 def get_latest_pressemeldinger():
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    response = requests.get(RSS_URL, headers=headers, timeout=30, verify=False)
-    response.raise_for_status()
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/rss+xml, application/xml; q=0.9, */*; q=0.8"
+    }
     
+    try:
+        response = requests.get(RSS_URL, headers=headers, timeout=30, verify=False)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if response.status_code == 429:
+            print("⚠️ 429 Too Many Requests: Rate-limited av Kongehuset. Venter ekstra lenge...")
+            time.sleep(1800)  # Venter 30 minutter ved rate-limit
+            return []
+        raise e
+
     feed = feedparser.parse(response.content)
     results = []
     
