@@ -27,7 +27,7 @@ def get_latest_pressemeldinger():
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "application/rss+xml, application/xml; q=0.9, */*; q=0.8"
     }
-    
+
     try:
         response = requests.get(RSS_URL, headers=headers, timeout=30, verify=False)
         response.raise_for_status()
@@ -40,7 +40,7 @@ def get_latest_pressemeldinger():
 
     feed = feedparser.parse(response.content)
     results = []
-    
+
     for entry in feed.entries:
         results.append({
             "title": entry.get("title", "Pressemelding"),
@@ -48,7 +48,7 @@ def get_latest_pressemeldinger():
             "date": entry.get("published", ""),
             "ingress": entry.get("summary", "")
         })
-        
+
     return results[:3]
 
 def send_to_slack(item):
@@ -58,17 +58,17 @@ def send_to_slack(item):
     ingress = item.get("ingress", "")
 
     message_lines = ["👑 *Ny pressemelding fra Kongehuset!*"]
-    
+
     if date:
         message_lines.append(f"🗓️ _{date}_")
-        
+
     message_lines.append(f"📌 *<{url}|{title}>*")
-    
+
     if ingress:
         message_lines.append(f">{ingress}")
 
     payload = {"text": "\n".join(message_lines)}
-    
+
     # Henter alle definerte webhooks
     webhooks = [w for w in [SLACK_WEBHOOK_URL_1, SLACK_WEBHOOK_URL_2, SLACK_WEBHOOK_URL_3, SLACK_WEBHOOK_URL_4] if w]
 
@@ -86,7 +86,7 @@ def send_to_slack(item):
 
 def main():
     seen_urls = []
-    
+
     if os.path.exists(STATE_FILE):
         try:
             with open(STATE_FILE, "r", encoding="utf-8") as f:
@@ -94,21 +94,24 @@ def main():
         except json.JSONDecodeError:
             print("⚠️ Filen var tom eller korrupt. Starter med blanke ark.")
             seen_urls = []
-            
+
     current_items = get_latest_pressemeldinger()
     new_seen = list(seen_urls)
-    
+
     for item in current_items:
         if item["url"] not in seen_urls:
             print(f"Ny pressemelding funnet: {item['title']}")
             send_to_slack(item)
             new_seen.append(item["url"])
-            
+
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(new_seen, f, ensure_ascii=False, indent=2)
 
+    # Siste melding på dashbordet: nyeste sak i feeden akkurat nå
+    siste_melding = current_items[0]["title"] if current_items else "Ingen pressemeldinger funnet i feeden"
+
     # Vellykket sjekk
-    update_status("kongehuset", "Kongehuset-overvåker", status="OK")
+    update_status("kongehuset", "Kongehuset-overvåker", status="OK", last_message=siste_melding)
 
 if __name__ == "__main__":
     while True:
@@ -119,6 +122,6 @@ if __name__ == "__main__":
             print(f"Feil under kjøring: {e}")
             # Registrerer feilen på dashbordet
             update_status("kongehuset", "Kongehuset-overvåker", status="ERROR", error_msg=str(e))
-        
+
         print("Venter 60 sekunder før neste sjekk...")
         time.sleep(60)
